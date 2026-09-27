@@ -38,14 +38,23 @@ Received documents are written to `aspire/.dev/ap-a/fwd` and `aspire/.dev/ap-b/f
 
 ## Send a test invoice from A to B
 
+`submit-auto` detects the document type and process from the XML itself:
+
 ```bash
-enc() { python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=''))" "$1"; }
-DT=$(enc 'busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1')
-PR=$(enc 'cenbii-procid-ubl::urn:fdc:peppol.eu:2017:poacc:billing:01:1.0')
 curl -X POST -H "X-Token: phoss-ap-development-token" -H "Content-Type: application/xml" \
   --data-binary @phoss-ap-testsender/src/main/resources/samples/invoice-ubl.xml \
-  "http://localhost:8081/api/outbound/submit/$(enc iso6523-actorid-upis::9915:sender)/$(enc iso6523-actorid-upis::9915:receiver)/$DT/$PR/AT"
+  "http://localhost:8081/api/outbound/submit-auto/iso6523-actorid-upis::9915:sender/iso6523-actorid-upis::9915:receiver/AT"
 ```
 
-The response should contain `"overallSuccess":true`. To send from B to A, use port `8082` and swap
-sender and receiver. The Swagger UI of each instance is another way to send documents.
+The response should contain `"overallSuccess":true` and the `sbdhInstanceIdentifier`. To send from
+B to A, use port `8082` and swap sender and receiver.
+
+Check the status on both sides:
+
+```bash
+curl -H "X-Token: phoss-ap-development-token" http://localhost:8081/api/outbound/status/<sbdhInstanceIdentifier>
+curl -H "X-Token: phoss-ap-development-token" http://localhost:8082/api/inbound/status/<sbdhInstanceIdentifier>
+```
+
+The OpenAPI spec of all endpoints is at http://localhost:8081/openapi/v3/api-docs. No UI is
+bundled, but the spec can be imported into Postman or Insomnia.
